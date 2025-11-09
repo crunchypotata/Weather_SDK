@@ -1,10 +1,7 @@
-# weather-sdk-java
+# Weather SDK
 
-Small Java SDK for OpenWeather API.
-
+Develop a SDK for accessing a weather API
 Task reference: https://openweathermap.org/api
-
----
 
 ## What this SDK provides
 
@@ -22,7 +19,66 @@ Task reference: https://openweathermap.org/api
 - Factory can delete SDK instance (`deleteSDK(apiKey)`)
 - Logging via SLF4J (debug = cache HIT / MISS, info = lifecycle)
 
----
+## SDK API
+
+### WeatherSDK interface
+
+| Method | Description |
+|--------|-------------|
+|`WeatherResponse getWeather(String city)` | Returns current weather for the given city (first match). Updates cache depending on SDK mode. |
+|`void delete()` | Clears cache and stops polling (if any). |
+
+### WeatherResponse DTO
+
+```java
+public class WeatherResponse {
+    private WeatherCondition weather;
+    private TemperaturePart temperature;
+    private Integer visibility;
+    private WindPart wind;
+    private Long datetime;
+    private SysPart sys;
+    private Integer timezone;
+    private String name;
+
+    public static class WeatherCondition {
+        private String main;
+        private String description;
+    }
+    public static class TemperaturePart {
+        private Double temp;
+        private Double feelsLike;
+    }
+    public static class WindPart {
+        private Double speed;
+    }
+    public static class SysPart {
+        private Long sunrise;
+        private Long sunset;
+    }
+}
+```
+### Modes
+
+- ON_DEMAND — updates weather only on method call
+- POLLING — updates weather in background every N minutes (default 10)
+
+### Factory
+
+- WeatherSDKFactory.createSDK(String apiKey, Mode mode) — creates SDK instance (only one per API key)
+- WeatherSDKFactory.deleteSDK(String apiKey) — deletes SDK instance
+
+## How to build
+
+``` bash 
+    ./gradlew build
+```
+
+## Documentation
+
+``` bash
+    ./gradlew javadoc
+```
 
 ## Usage example
 
@@ -36,18 +92,10 @@ System.out.println("Temperature = " + resp.getTemperature().getTemp());
 WeatherSDKFactory.deleteSDK("YOUR_API_KEY"); // optional cleanup
 ```
 
-
-## How to build
-
-./gradlew build
-
-## Documentation
-
-./gradlew javadoc
-
 ## Notes
 
-API contract (WeatherResponse):
+**API contract (WeatherResponse):**
+
 - fields always non-null (if provided by OpenWeather)
 - temperature fields are in Kelvin (same as original API)
 - datetime = unix timestamp (sec)
