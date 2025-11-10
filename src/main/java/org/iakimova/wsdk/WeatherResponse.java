@@ -1,7 +1,12 @@
 package org.iakimova.wsdk;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.util.List;
 
 /**
  * DTO representing “current weather” response from OpenWeather API.
@@ -10,8 +15,13 @@ import lombok.Data;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class WeatherResponse {
-    private WeatherCondition weather;
+
+    private List<WeatherCondition> weather;
+    @JsonProperty("main")
     private TemperaturePart temperature;
     private Integer visibility;
     private WindPart wind;
@@ -19,9 +29,15 @@ public class WeatherResponse {
     private SysPart sys;
     private Integer timezone;
     private String name;
+    public WeatherCondition firstWeather() {
+        return (weather == null || weather.isEmpty()) ? null : weather.get(0);
+    }
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class WeatherCondition {
 
         /** Main weather (Clouds, Rain, etc.) */
@@ -36,8 +52,12 @@ public class WeatherResponse {
      */
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class TemperaturePart {
         private Double temp;
+        @JsonProperty("feels_like")
         private Double feelsLike;
     }
 
@@ -46,6 +66,9 @@ public class WeatherResponse {
      */
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class WindPart {
         private Double speed;
     }
@@ -55,6 +78,9 @@ public class WeatherResponse {
      */
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class SysPart {
         private Long sunrise;
         private Long sunset;

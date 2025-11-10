@@ -1,10 +1,16 @@
 package org.iakimova.wsdk;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 
 public class WeatherJsonMapper {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
+
+    public WeatherJsonMapper() {
+        this.objectMapper = new ObjectMapper();
+        this.objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+    }
 
     public WeatherResponse map(String rawJson) throws WeatherSDKException {
         try {

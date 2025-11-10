@@ -1,18 +1,31 @@
-package org.iakimova.wsdk;
+package org.iakimova.wsdk.examples;
 
+import org.iakimova.wsdk.*;
+
+/**
+ * Example of using WeatherSDK in ON_DEMAND mode.
+ */
 public class ExampleUsage {
 
     public static void main(String[] args) {
-        String apiKey = "YOUR_OPENWEATHER_API_KEY";
+        String apiKey = System.getenv("OPENWEATHER_API_KEY");
+        if (apiKey == null) {
+            throw new IllegalStateException("You must set env variable OPENWEATHER_API_KEY");
+        }
+
 
         try {
-            // --- создаем SDK через фабрику ---
-            WeatherSDK sdk = WeatherSDKFactory.createSDK(apiKey, Mode.ON_DEMAND);
+            // Create WeatherClient with your API key
+            WeatherClient client = new WeatherApiClient(apiKey);
 
-            // --- получаем погоду для города ---
-            WeatherResponse weather = sdk.getWeather("Zocca");
+            // Сreate SDK via factory
+            WeatherSDK sdk = WeatherSDKFactory.createSDK(apiKey, client, Mode.ON_DEMAND, 10);
+
+            // Fetch weather for a city
+            WeatherResponse weather = sdk.getWeather("Delhi");
+
             System.out.println("City: " + weather.getName());
-            System.out.println("Weather: " + weather.getWeather().getMain() + " - " + weather.getWeather().getDescription());
+            System.out.println("Weather: " + weather.firstWeather().getMain());
             System.out.println("Temperature: " + weather.getTemperature().getTemp() + "K (feels like " + weather.getTemperature().getFeelsLike() + "K)");
             System.out.println("Wind speed: " + weather.getWind().getSpeed());
             System.out.println("Visibility: " + weather.getVisibility());
@@ -21,7 +34,7 @@ public class ExampleUsage {
             System.out.println("Timezone: " + weather.getTimezone());
             System.out.println("Datetime: " + weather.getDatetime());
 
-            // --- удаляем SDK (очищаем кеш и остановка polling) ---
+            // Delete SDK (clears cache and stops polling)
             WeatherSDKFactory.deleteSDK(apiKey);
 
         } catch (WeatherSDKException e) {
