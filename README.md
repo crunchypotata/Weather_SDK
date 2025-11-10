@@ -1,33 +1,38 @@
-# Weather SDK
+# Weather SDK 🌝
 
 Develop a SDK for accessing a weather API  
 Task reference: https://openweathermap.org/api
+<br>
 
-## Architecture & Modularity
-
+## 🗄️ Architecture & Modularity
+<br>
 This SDK is **modular**, with a clear separation of concerns:
 
 - **WeatherAPI** — handles HTTP requests to OpenWeather; can be replaced or mocked for testing.
 - **WeatherCache** — independent cache for up to configurable number of cities; TTL configurable; can be swapped with custom implementations.
-- **WeatherSDK** — orchestrates API calls and cache, supports **ON_DEMAND** and **POLLING** modes.
+- **WeatherSDK** — orchestrates API calls and cache, supports `ON_DEMAND` and `POLLING` modes.
 
-All modules are fully **configurable** and **testable** independently.
-
-## Testing & Coverage
-
+⭐ All modules are fully **configurable** and **testable** independently.
+<br>
+<br>
+## 📈 Testing & Coverage
 
 - Unit tests cover all **DTO mappings**, caching behavior, and SDK lifecycle.
 - Integration tests simulate full SDK usage, including **background polling** and cache expiry.
 - Coverage includes full lifecycle of SDK instances (creation, API calls, caching, deletion).
-- Ensures that **WeatherSDKFactory** enforces **singleton-per-API-key** rule.
+- Ensures that `WeatherSDKFactory` enforces **singleton-per-API-key** rule.
+<br>
+<br>
 
-## Configuration & Usage
+## ✅ Configuration & Usage
 - Cache:
 Size configurable (default: 10 cities)
 TTL configurable (default: 10 minutes)
-- Polling interval configurable for POLLING mode
-- 
-## SDK API
+- Polling interval configurable for `POLLING` mode
+<br>
+<br>
+
+## 🔊 SDK API
 ### WeatherSDK Interface
 
 | Method | Description |
@@ -37,8 +42,9 @@ TTL configurable (default: 10 minutes)
 | `setCacheSize(int size)` | Configures cache size (optional). |
 | `setCacheTTLMinutes(int minutes)` | Configures cache TTL (optional). |
 | `setPollingIntervalMinutes(int minutes)` | Configures polling interval for **POLLING** mode (optional). |
+<br>
 
-### WeatherResponse DTO
+## 👾 WeatherResponse DTO
 
 Represents current weather returned by the SDK. Includes:
 
@@ -53,23 +59,23 @@ Represents current weather returned by the SDK. Includes:
 
 Convenience method `firstWeather()` returns the first weather condition.
 
-### Modes
+## ⚙️ Modes
 
 - ON_DEMAND — updates weather only on method call
 - POLLING — updates weather in background every N minutes (default 10)
 
-### Factory
+## 🏭 Factory
 
 - WeatherSDKFactory.createSDK(String apiKey, Mode mode) — creates SDK instance (only one per API key)
 - WeatherSDKFactory.deleteSDK(String apiKey) — deletes SDK instance
 
-## How to build
+## 🛠 How to build
 
 ``` bash 
     ./gradlew build
 ```
 
-## Documentation
+## 📜  Documentation
 
 ``` bash
     ./gradlew javadoc
@@ -94,7 +100,7 @@ System.out.println(resp.getName());
         WeatherSDKFactory.deleteSDK("YOUR_API_KEY");
 ```
 
-## Notes
+## 📝 Notes
 
 - fields always non-null (if provided by OpenWeather)
 - temperature fields are in Kelvin (same as original API)
@@ -102,7 +108,7 @@ System.out.println(resp.getName());
 - timezone = offset in seconds
 - wind speed m/s
 
-## Future Enhancements
+## 🌚 Future Enhancements
 - Add request metrics and cache hit ratio reporting
 - Implement retry strategy on network errors
 - Extract HTTP client into an interface for easier testing and replacement
