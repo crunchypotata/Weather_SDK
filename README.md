@@ -4,6 +4,7 @@ Develop a SDK for accessing a weather API
 Task reference: https://openweathermap.org/api
 <br>
 <br>
+___
 
 ## 🗄️ Architecture & Modularity
 #### This SDK is modular, with a clear separation of concerns: ####
@@ -15,6 +16,7 @@ Task reference: https://openweathermap.org/api
 ⭐ All modules are fully **configurable** and **testable** independently.
 <br>
 <br>
+
 ## 📈 Testing & Coverage
 
 - Unit tests cover all **DTO mappings**, caching behavior, and SDK lifecycle.
@@ -31,6 +33,8 @@ TTL configurable (default: 10 minutes)
 - Polling interval configurable for `POLLING` mode
 <br>
 <br>
+
+___
 
 ## 🔊 SDK API
 ### WeatherSDK Interface
@@ -60,6 +64,7 @@ Represents current weather returned by the SDK. Includes:
 Convenience method `firstWeather()` returns the first weather condition.
 <br>
 <br>
+___
 
 ## ⚙️ Modes
 
