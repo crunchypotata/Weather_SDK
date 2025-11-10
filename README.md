@@ -24,7 +24,6 @@ ___
 - Coverage includes full lifecycle of SDK instances (creation, API calls, caching, deletion).
 - Ensures that `WeatherSDKFactory` enforces **singleton-per-API-key** rule.
 <br>
-<br>
 
 ## ✅ Configuration & Usage
 - Cache:
@@ -33,8 +32,6 @@ TTL configurable (default: 10 minutes)
 - Polling interval configurable for `POLLING` mode
 <br>
 <br>
-
-___
 
 ## 🔊 SDK API
 ### WeatherSDK Interface
@@ -64,7 +61,7 @@ Represents current weather returned by the SDK. Includes:
 Convenience method `firstWeather()` returns the first weather condition.
 <br>
 <br>
-___
+
 
 ## ⚙️ Modes
 
