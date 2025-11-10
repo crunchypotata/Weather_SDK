@@ -3,6 +3,7 @@
 Develop a SDK for accessing a weather API  
 Task reference: https://openweathermap.org/api
 <br>
+<br>
 
 ## 🗄️ Architecture & Modularity
 <br>
@@ -23,7 +24,6 @@ This SDK is **modular**, with a clear separation of concerns:
 - Ensures that `WeatherSDKFactory` enforces **singleton-per-API-key** rule.
 <br>
 <br>
-
 ## ✅ Configuration & Usage
 - Cache:
 Size configurable (default: 10 cities)
@@ -58,6 +58,8 @@ Represents current weather returned by the SDK. Includes:
 - `name` — city name
 
 Convenience method `firstWeather()` returns the first weather condition.
+<br>
+<br>
 
 ## ⚙️ Modes
 
@@ -68,6 +70,8 @@ Convenience method `firstWeather()` returns the first weather condition.
 
 - WeatherSDKFactory.createSDK(String apiKey, Mode mode) — creates SDK instance (only one per API key)
 - WeatherSDKFactory.deleteSDK(String apiKey) — deletes SDK instance
+<br>
+<br>
 
 ## 🛠 How to build
 
@@ -99,6 +103,8 @@ System.out.println(resp.getName());
 // Delete SDK instance and clean up resources
         WeatherSDKFactory.deleteSDK("YOUR_API_KEY");
 ```
+<br>
+<br>
 
 ## 📝 Notes
 
