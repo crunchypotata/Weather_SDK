@@ -6,8 +6,7 @@ Task reference: https://openweathermap.org/api
 <br>
 
 ## 🗄️ Architecture & Modularity
-<br>
-This SDK is **modular**, with a clear separation of concerns:
+#### This SDK is modular, with a clear separation of concerns: ####
 
 - **WeatherAPI** — handles HTTP requests to OpenWeather; can be replaced or mocked for testing.
 - **WeatherCache** — independent cache for up to configurable number of cities; TTL configurable; can be swapped with custom implementations.
@@ -24,6 +23,7 @@ This SDK is **modular**, with a clear separation of concerns:
 - Ensures that `WeatherSDKFactory` enforces **singleton-per-API-key** rule.
 <br>
 <br>
+
 ## ✅ Configuration & Usage
 - Cache:
 Size configurable (default: 10 cities)
@@ -84,6 +84,7 @@ Convenience method `firstWeather()` returns the first weather condition.
 ``` bash
     ./gradlew javadoc
 ```
+<br>
 
 ## Usage example
 
