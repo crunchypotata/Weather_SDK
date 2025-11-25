@@ -22,7 +22,7 @@ public class ExampleUsage {
             WeatherSDK sdk = WeatherSDKFactory.createSDK(apiKey, client, Mode.ON_DEMAND, 10);
 
             // Fetch weather for a city
-            WeatherResponse weather = sdk.getWeather("Delhi");
+            WeatherResponse weather = sdk.getWeather("Karachi");
 
             System.out.println("City: " + weather.getName());
             System.out.println("Weather: " + weather.firstWeather().getMain());

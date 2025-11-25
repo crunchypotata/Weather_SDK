@@ -18,6 +18,14 @@ public final class WeatherSDKFactory {
     }
 
     public static void deleteSDK(String apiKey) {
-        instances.remove(apiKey);
+        if (apiKey == null) {
+            return; // nothing to delete
+        }
+
+        WeatherSDK sdk = instances.remove(apiKey);
+        if (sdk != null) {
+            // IMPORTANT: shut down background polling thread and free resources
+            sdk.delete();
+        }
     }
 }

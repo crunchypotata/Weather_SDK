@@ -24,7 +24,7 @@ public class WeatherSDKImpl implements WeatherSDK {
     private final Mode mode;
     private final int pollingIntervalMinutes;
     private final WeatherCache cache;
-    private ScheduledExecutorService scheduler;
+    private volatile ScheduledExecutorService scheduler;
 
     /**
      * Main constructor using dependency injection.
@@ -55,7 +55,7 @@ public class WeatherSDKImpl implements WeatherSDK {
     }
 
     /**
-     * Retrieves weather for a city. Checks cache first (TTL 10min).
+     * Retrieves weather for a city. Checks cache first (TTL 10 min).
      * @param city City name
      * @return WeatherResponse
      * @throws WeatherSDKException
@@ -114,7 +114,12 @@ public class WeatherSDKImpl implements WeatherSDK {
      */
     private void startPolling() {
         log.info("WeatherSDK polling started every {} minutes", pollingIntervalMinutes);
-        scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r);
+            t.setDaemon(true);
+            t.setName("WeatherSDK-Polling-Thread");
+            return t;
+        });
         scheduler.scheduleAtFixedRate(() -> {
             try {
                 for (String city : cache.keySet()) {
