@@ -4,89 +4,78 @@ import org.iakimova.wsdk.cache.LRUWeatherCache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Integration tests for WeatherSDKImpl using a stub WeatherClient.
- * Adapted to new SDK: getWeather() returns a list of WeatherCondition.
+ * Integration tests for WeatherSDKImpl.
  */
 class WeatherSDKImplIntegrationTest {
 
     private WeatherSDKImpl sdk;
     private final String CITY = "Zocca";
+    private static final long DEFAULT_TTL = TimeUnit.MINUTES.toMillis(10);
 
-    // Fixed JSON returned by the stub client
-    private final String RAW_JSON = """
-        {
-          "weather": [{"main": "Clouds", "description": "scattered clouds"}],
-          "temperature": {"temp": 269.6, "feels_like": 267.57},
-          "visibility": 10000,
-          "wind": {"speed": 1.38},
-          "datetime": 1675744800,
-          "sys": {"sunrise": 1675751262, "sunset": 1675787560},
-          "timezone": 3600,
-          "name": "Zocca"
-        }
-        """;
+    // Supplier creates a FRESH object on every call to simulate real API behavior
+    private final Supplier<WeatherResponse> responseSupplier = () -> 
+        WeatherResponse.builder()
+                .name(CITY)
+                .weather(Collections.singletonList(
+                        new WeatherResponse.WeatherCondition("Clouds", "scattered clouds")
+                ))
+                .temperature(WeatherResponse.MainData.builder()
+                        .temp(269.6)
+                        .feelsLike(267.57)
+                        .build())
+                .datetime(1675744800L)
+                .timezone(3600)
+                .build();
 
     @BeforeEach
     void setUp() {
-        // Create stub client and pass to SDK
-        WeatherClient stubClient = new WeatherClientStub(RAW_JSON);
-        WeatherJsonMapper mapper = new WeatherJsonMapper();
-
-        // Initialize SDK in ON_DEMAND mode with LRU cache
-        sdk = new WeatherSDKImpl(stubClient, mapper, Mode.ON_DEMAND, 10, new LRUWeatherCache(10));
+        WeatherClient stubClient = new WeatherClientStub(responseSupplier);
+        sdk = new WeatherSDKImpl(stubClient, Mode.ON_DEMAND, 10, new LRUWeatherCache(10, DEFAULT_TTL));
     }
 
     @Test
     void testGetWeather_CacheMissAndHit() throws WeatherSDKException {
-        // First call → cache miss, fetches new data
+        // First call → cache miss
         WeatherResponse response1 = sdk.getWeather(CITY);
         assertNotNull(response1);
-        assertNotNull(response1.firstWeather());
-        assertEquals("Clouds", response1.firstWeather().getMain());
 
-        // Second call → cache hit, returns cached data
+        // Second call → cache hit (should be EXACTLY the same instance in memory)
         WeatherResponse response2 = sdk.getWeather(CITY);
-        assertNotNull(response2);
-        assertNotNull(response2.firstWeather());
-        assertEquals("Clouds", response2.firstWeather().getMain());
+        assertSame(response1, response2, "Should return the SAME object from cache (hit)");
     }
 
     @Test
-    void testPollingMode_RefreshesCache() throws WeatherSDKException, InterruptedException {
-        // Enable POLLING mode SDK
-        WeatherClient stubClient = new WeatherClientStub(RAW_JSON);
-        WeatherJsonMapper mapper = new WeatherJsonMapper();
-        WeatherSDKImpl pollingSdk = new WeatherSDKImpl(stubClient, mapper, Mode.POLLING, 1, new LRUWeatherCache(10));
+    void testExpirationTriggersRefresh() throws WeatherSDKException, InterruptedException {
+        WeatherClient stubClient = new WeatherClientStub(responseSupplier);
+        // Very short TTL of 50ms
+        WeatherSDKImpl shortTtlSdk = new WeatherSDKImpl(stubClient, Mode.ON_DEMAND, 10, new LRUWeatherCache(10, 50));
 
-        // Add a city to cache
-        pollingSdk.getWeather(CITY);
+        WeatherResponse response1 = shortTtlSdk.getWeather(CITY);
+        
+        // Wait longer than TTL
+        Thread.sleep(100); 
 
-        // Wait 2 seconds → polling should refresh the cache
-        TimeUnit.SECONDS.sleep(2);
-
-        WeatherResponse refreshed = pollingSdk.getWeather(CITY);
-        assertNotNull(refreshed);
-        assertNotNull(refreshed.firstWeather());
-        assertEquals("Clouds", refreshed.firstWeather().getMain());
-
-        // Stop polling to clean up
-        pollingSdk.delete();
+        // Second call → data was stale → cache refreshed from supplier → NEW object created
+        WeatherResponse response2 = shortTtlSdk.getWeather(CITY);
+        
+        assertNotSame(response1, response2, "Should fetch a FRESH object after cache expiration");
+        assertEquals(response1.getName(), response2.getName(), "Data content should still be correct");
     }
 
     @Test
     void testDeleteClearsCache() throws WeatherSDKException {
-        sdk.getWeather(CITY);
+        WeatherResponse response1 = sdk.getWeather(CITY);
         sdk.delete();
 
-        // After delete, cache should be empty → new fetch occurs
-        WeatherResponse response = sdk.getWeather(CITY);
-        assertNotNull(response);
-        assertNotNull(response.firstWeather());
-        assertEquals("Clouds", response.firstWeather().getMain());
+        // After delete, even if TTL hasn't passed, cache is empty → new fetch
+        WeatherResponse response2 = sdk.getWeather(CITY);
+        assertNotSame(response1, response2);
     }
 }

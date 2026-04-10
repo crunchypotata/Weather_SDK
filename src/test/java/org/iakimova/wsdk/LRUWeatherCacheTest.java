@@ -5,16 +5,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class LRUWeatherCacheTest {
 
     private LRUWeatherCache cache;
+    private static final long DEFAULT_TTL = TimeUnit.MINUTES.toMillis(10);
 
     @BeforeEach
     void setUp() {
-        cache = new LRUWeatherCache(3); // limit for LRU test
+        cache = new LRUWeatherCache(3, DEFAULT_TTL);
     }
 
     @Test
@@ -24,6 +26,20 @@ class LRUWeatherCacheTest {
 
         assertSame(response, cache.get("City1"));
         assertNull(cache.get("UnknownCity"));
+    }
+
+    @Test
+    void testExpiration() throws InterruptedException {
+        // Small TTL for testing
+        LRUWeatherCache fastCache = new LRUWeatherCache(10, 100); 
+        WeatherResponse response = new WeatherResponse();
+        
+        fastCache.put("City", response);
+        assertNotNull(fastCache.get("City"));
+        
+        Thread.sleep(150); // wait for expiration
+        
+        assertNull(fastCache.get("City"), "Entry should be expired and removed");
     }
 
     @Test
@@ -55,14 +71,14 @@ class LRUWeatherCacheTest {
         cache.put("City2", new WeatherResponse());
         cache.put("City3", new WeatherResponse());
 
-        // Access City1 → "fresh"
+        // Access City1 → makes it "recently used"
         cache.get("City1");
 
-        // Add new → should be superseded(the oldest)
+        // Add 4th city → should evict City2 (the oldest unused)
         cache.put("City4", new WeatherResponse());
 
         assertNotNull(cache.get("City1"));
-        assertNull(cache.get("City2")); // superseded
+        assertNull(cache.get("City2"), "City2 should be evicted by LRU policy");
         assertNotNull(cache.get("City3"));
         assertNotNull(cache.get("City4"));
     }

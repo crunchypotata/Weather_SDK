@@ -15,6 +15,7 @@ public class WeatherJsonMapperTest {
     @BeforeEach
     void setUp() throws WeatherSDKException {
         mapper = new WeatherJsonMapper();
+        // Updated JSON to match real OpenWeather structure (using "dt" for datetime)
         rawJson = """
         {
           "weather": [
@@ -25,13 +26,16 @@ public class WeatherJsonMapperTest {
           ],
           "main": {
             "temp": 269.6,
-            "feels_like": 267.57
+            "feels_like": 267.57,
+            "humidity": 64,
+            "pressure": 1015
           },
           "visibility": 10000,
           "wind": {
-            "speed": 1.38
+            "speed": 1.38,
+            "deg": 350
           },
-          "datetime": 1675744800,
+          "dt": 1675744800,
           "sys": {
             "sunrise": 1675751262,
             "sunset": 1675787560
@@ -56,6 +60,8 @@ public class WeatherJsonMapperTest {
         assertNotNull(response.getTemperature());
         assertEquals(269.6, response.getTemperature().getTemp());
         assertEquals(267.57, response.getTemperature().getFeelsLike());
+        assertEquals(64, response.getTemperature().getHumidity());
+        assertEquals(1015, response.getTemperature().getPressure());
     }
 
     @Test
@@ -68,6 +74,7 @@ public class WeatherJsonMapperTest {
     void testWind() {
         assertNotNull(response.getWind());
         assertEquals(1.38, response.getWind().getSpeed());
+        assertEquals(350, response.getWind().getDeg());
     }
 
     @Test

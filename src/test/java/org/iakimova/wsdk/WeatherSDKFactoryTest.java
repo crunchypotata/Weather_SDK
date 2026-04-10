@@ -5,44 +5,49 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for WeatherSDKFactory singleton behavior.
- * API-agnostic, so we pass WeatherClient to factory.
  */
 class WeatherSDKFactoryTest {
 
     @Test
     void testSingletonPerApiKey() throws WeatherSDKException {
-        // Create stub clients with the same "API key" internally
-        WeatherClient client1 = new WeatherClientStub("{\"weather\":{\"main\":\"Clear\"}}");
-        WeatherClient client2 = new WeatherClientStub("{\"weather\":{\"main\":\"Clear\"}}");
+        // Create stub response and clients
+        WeatherResponse response = WeatherResponse.builder().name("TestCity").build();
+        WeatherClient client1 = new WeatherClientStub(response);
+        WeatherClient client2 = new WeatherClientStub(response);
+        
+        WeatherSDKConfig config = WeatherSDKConfig.builder().build();
 
         // First creation
-        WeatherSDK sdk1 = WeatherSDKFactory.createSDK("KEY1", client1, Mode.ON_DEMAND, 10);
+        WeatherSDK sdk1 = WeatherSDKFactory.getSDK("KEY1", config, client1);
 
         // Second creation with the same key → should return the same instance
-        WeatherSDK sdk2 = WeatherSDKFactory.createSDK("KEY1", client2, Mode.ON_DEMAND, 10);
+        WeatherSDK sdk2 = WeatherSDKFactory.getSDK("KEY1", config, client2);
 
         assertSame(sdk1, sdk2, "SDK instances with the same API key should be the same");
     }
 
     @Test
     void testDifferentKeysProduceDifferentInstances() throws WeatherSDKException {
-        WeatherClient client1 = new WeatherClientStub("{\"weather\":{\"main\":\"Clear\"}}");
-        WeatherClient client2 = new WeatherClientStub("{\"weather\":{\"main\":\"Clouds\"}}");
+        WeatherResponse response = WeatherResponse.builder().name("TestCity").build();
+        WeatherClient client = new WeatherClientStub(response);
+        WeatherSDKConfig config = WeatherSDKConfig.builder().build();
 
-        WeatherSDK sdk1 = WeatherSDKFactory.createSDK("KEY1", client1, Mode.ON_DEMAND, 10);
-        WeatherSDK sdk2 = WeatherSDKFactory.createSDK("KEY2", client2, Mode.ON_DEMAND, 10);
+        WeatherSDK sdk1 = WeatherSDKFactory.getSDK("KEY_A", config, client);
+        WeatherSDK sdk2 = WeatherSDKFactory.getSDK("KEY_B", config, client);
 
         assertNotSame(sdk1, sdk2, "SDK instances with different API keys should be different");
     }
 
     @Test
     void testDeleteRemovesInstance() throws WeatherSDKException {
-        WeatherClient client1 = new WeatherClientStub("{\"weather\":{\"main\":\"Clear\"}}");
+        WeatherResponse response = WeatherResponse.builder().name("TestCity").build();
+        WeatherClient client = new WeatherClientStub(response);
+        WeatherSDKConfig config = WeatherSDKConfig.builder().build();
 
-        WeatherSDK sdk1 = WeatherSDKFactory.createSDK("KEY3", client1, Mode.ON_DEMAND, 10);
-        WeatherSDKFactory.deleteSDK("KEY3");
+        WeatherSDK sdk1 = WeatherSDKFactory.getSDK("KEY_DELETE", config, client);
+        WeatherSDKFactory.deleteSDK("KEY_DELETE");
 
-        WeatherSDK sdk2 = WeatherSDKFactory.createSDK("KEY3", client1, Mode.ON_DEMAND, 10);
+        WeatherSDK sdk2 = WeatherSDKFactory.getSDK("KEY_DELETE", config, client);
 
         assertNotSame(sdk1, sdk2, "After deletion, creating SDK with the same key should produce a new instance");
     }

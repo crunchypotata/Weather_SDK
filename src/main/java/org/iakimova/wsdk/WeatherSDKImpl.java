@@ -8,43 +8,37 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * SDK implementation. Fully agnostic to API provider.
- * Key changes:
- * 1) API key is no longer passed to SDK — it lives in the WeatherClient.
- * 2) SDK only depends on WeatherClient interface.
- * 3) Constructors with String apiKey removed to enforce DI.
+ * Core implementation of the Weather SDK.
+ * <p>
+ * This class orchestrates weather data retrieval strategies, delegating the 
+ * specifics of network communication and data formatting to the {@link WeatherClient}.
+ * It manages the cache's lifecycle and ensures that users receive fresh data.
  */
 public class WeatherSDKImpl implements WeatherSDK {
 
     private static final Logger log = LoggerFactory.getLogger(WeatherSDKImpl.class);
-    private static final long TTL_MS = 10 * 60 * 1000; // 10 min
 
-    private final WeatherClient apiClient;
-    private final WeatherJsonMapper mapper;
+    private final WeatherClient weatherProvider;
     private final Mode mode;
     private final int pollingIntervalMinutes;
     private final WeatherCache cache;
-    private volatile ScheduledExecutorService scheduler;
+    private ScheduledExecutorService scheduler;
 
     /**
-     * Main constructor using dependency injection.
-     * SDK is now completely agnostic to API provider.
+     * Constructs a new {@code WeatherSDKImpl} instance.
      *
-     * @param apiClient Any implementation of WeatherClient (OpenWeather, stub, etc.)
-     * @param mapper    JSON mapper
-     * @param mode      ON_DEMAND or POLLING
-     * @param pollingIntervalMinutes interval for polling mode
-     * @param cache     Cache implementation
+     * @param weatherProvider       The provider responsible for fetching and formatting weather data.
+     * @param mode                  The operation mode ({@link Mode#ON_DEMAND} or {@link Mode#POLLING}).
+     * @param pollingIntervalMinutes The interval in minutes for background updates (if active).
+     * @param cache                 The cache implementation used for storing weather data.
      */
     public WeatherSDKImpl(
-            WeatherClient apiClient,
-            WeatherJsonMapper mapper,
+            WeatherClient weatherProvider,
             Mode mode,
             int pollingIntervalMinutes,
             WeatherCache cache
     ) {
-        this.apiClient = apiClient;
-        this.mapper = mapper;
+        this.weatherProvider = weatherProvider;
         this.mode = mode;
         this.pollingIntervalMinutes = pollingIntervalMinutes;
         this.cache = cache;
@@ -55,92 +49,93 @@ public class WeatherSDKImpl implements WeatherSDK {
     }
 
     /**
-     * Retrieves weather for a city. Checks cache first (TTL 10 min).
-     * @param city City name
-     * @return WeatherResponse
-     * @throws WeatherSDKException
+     * {@inheritDoc}
+     * <p>
+     * Returns cached data if it's within the TTL; otherwise, fetches fresh data 
+     * from the provider and updates the cache.
+     *
+     * @param city The name of the city.
+     * @return A {@link WeatherResponse} for the given city.
+     * @throws WeatherSDKException if the update fails.
      */
     @Override
     public WeatherResponse getWeather(String city) throws WeatherSDKException {
+        log.debug("Fetching weather for city: {}", city);
 
-        log.debug("WeatherSDK.getWeather city={}", city);
+        // Cache implementation handles TTL internally. If data is stale, it returns null.
+        WeatherResponse response = cache.get(city);
 
-        WeatherResponse cached = cache.get(city);
-        boolean needsUpdate = true;
-
-        if (cached != null) {
-            Long dt = cached.getDatetime();
-            if (dt != null) {
-                long lastUpdated = dt * 1000; // convert to ms
-                long now = System.currentTimeMillis();
-                if (now - lastUpdated < TTL_MS) {
-                    needsUpdate = false; // cache hit
-                }
-            } else {
-                log.debug("cached datetime is null for {}, forcing update", city);
-            }
-        }
-
-        if (needsUpdate) {
-            log.debug("cache MISS or EXPIRED → fetching new data for {}", city);
-            String rawJson = apiClient.getRawWeatherJson(city);
-            WeatherResponse response = mapper.map(rawJson);
-
-            // На всякий случай: если API не возвращает datetime, ставим текущий момент
-            if (response.getDatetime() == null) {
-                response.setDatetime(System.currentTimeMillis() / 1000); // seconds
-            }
-
-            cache.put(city, response);
-            return response;
+        if (response == null) {
+            log.debug("Cache miss or expired for {}. Fetching from provider.", city);
+            response = updateWeatherForCity(city);
         } else {
-            log.debug("cache HIT → return cached data for {}", city);
-            return cached;
+            log.debug("Cache hit for {}.", city);
         }
+
+        return response;
     }
 
     /**
-     * Clears cache and stops polling.
+     * Fetches fresh data from the weather provider and stores it in the local cache.
+     *
+     * @param city The city name.
+     * @return The updated {@link WeatherResponse}.
+     * @throws WeatherSDKException if the update fails.
+     */
+    private WeatherResponse updateWeatherForCity(String city) throws WeatherSDKException {
+        WeatherResponse response = weatherProvider.getWeather(city);
+        
+        // Ensure timestamp is present for internal consistency if the provider didn't set it
+        if (response.getDatetime() == null) {
+            response.setDatetime(System.currentTimeMillis() / 1000);
+        }
+        
+        cache.put(city, response);
+        return response;
+    }
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     public void delete() {
-        log.info("WeatherSDK.delete() called → cache cleared and polling stopped");
-        cache.clear();
+        log.info("Deleting SDK instance: clearing cache and stopping background threads.");
         stopPolling();
+        cache.clear();
     }
 
     /**
-     * Starts polling thread if mode == POLLING.
+     * Starts the background polling thread for periodic updates.
      */
-    private void startPolling() {
-        log.info("WeatherSDK polling started every {} minutes", pollingIntervalMinutes);
+    private synchronized void startPolling() {
+        if (scheduler != null) return;
+
+        log.info("Starting background polling every {} minutes", pollingIntervalMinutes);
         scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r);
+            Thread t = new Thread(r, "WeatherSDK-Polling-Thread");
             t.setDaemon(true);
-            t.setName("WeatherSDK-Polling-Thread");
             return t;
         });
+
         scheduler.scheduleAtFixedRate(() -> {
-            try {
-                for (String city : cache.keySet()) {
-                    log.debug("polling refresh city={}", city);
-                    String rawJson = apiClient.getRawWeatherJson(city);
-                    WeatherResponse response = mapper.map(rawJson);
-                    cache.put(city, response);
+            for (String city : cache.keySet()) {
+                try {
+                    log.debug("Polling update for city: {}", city);
+                    updateWeatherForCity(city);
+                } catch (Exception e) {
+                    log.error("Background update failed for city: {}. Error: {}", city, e.getMessage());
                 }
-            } catch (WeatherSDKException e) {
-                log.error("polling error", e);
             }
-        }, 0, pollingIntervalMinutes, TimeUnit.MINUTES);
+        }, pollingIntervalMinutes, pollingIntervalMinutes, TimeUnit.MINUTES);
     }
 
     /**
-     * Stops polling thread.
+     * Safely stops the polling executor service.
      */
-    private void stopPolling() {
-        if (scheduler != null && !scheduler.isShutdown()) {
+    private synchronized void stopPolling() {
+        if (scheduler != null) {
             scheduler.shutdownNow();
-            log.info("WeatherSDK polling stopped");
+            scheduler = null;
         }
     }
 }
