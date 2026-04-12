@@ -1,4 +1,7 @@
-package org.iakimova.wsdk;
+package org.iakimova.wsdk.client;
+
+import org.iakimova.wsdk.domain.WeatherSDKException;
+import org.iakimova.wsdk.domain.WeatherResponse;
 
 /**
  * Interface for any weather API adapter.

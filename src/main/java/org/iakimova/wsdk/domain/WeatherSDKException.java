@@ -1,4 +1,4 @@
-package org.iakimova.wsdk;
+package org.iakimova.wsdk.domain;
 
 /**
  * Custom exception used by WeatherSDK.

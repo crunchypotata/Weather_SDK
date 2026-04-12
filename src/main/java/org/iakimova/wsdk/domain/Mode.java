@@ -1,4 +1,4 @@
-package org.iakimova.wsdk;
+package org.iakimova.wsdk.domain;
 
 /**
  * Mode of SDK behavior.

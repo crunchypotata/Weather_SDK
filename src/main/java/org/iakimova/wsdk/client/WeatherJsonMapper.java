@@ -1,7 +1,9 @@
-package org.iakimova.wsdk;
+package org.iakimova.wsdk.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import org.iakimova.wsdk.domain.WeatherSDKException;
+import org.iakimova.wsdk.domain.WeatherResponse;
 
 public class WeatherJsonMapper {
 

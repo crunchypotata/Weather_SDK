@@ -1,8 +1,11 @@
-package org.iakimova.wsdk;
+package org.iakimova.wsdk.client;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.iakimova.wsdk.domain.WeatherSDKException;
+import org.iakimova.wsdk.domain.WeatherResponse;
+
 import java.io.IOException;
 
 /**

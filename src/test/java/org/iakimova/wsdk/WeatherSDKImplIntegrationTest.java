@@ -1,6 +1,11 @@
 package org.iakimova.wsdk;
 
+import org.iakimova.wsdk.advisor.WeatherAdvisor;
 import org.iakimova.wsdk.cache.LRUWeatherCache;
+import org.iakimova.wsdk.client.WeatherClient;
+import org.iakimova.wsdk.core.WeatherSDKImpl;
+import org.iakimova.wsdk.domain.Mode;
+import org.iakimova.wsdk.domain.WeatherSDKException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +24,6 @@ class WeatherSDKImplIntegrationTest {
     private final String CITY = "Zocca";
     private static final long DEFAULT_TTL = TimeUnit.MINUTES.toMillis(10);
 
-    // Supplier creates a FRESH object on every call to simulate real API behavior
     private final Supplier<WeatherResponse> responseSupplier = () -> 
         WeatherResponse.builder()
                 .name(CITY)
@@ -37,16 +41,15 @@ class WeatherSDKImplIntegrationTest {
     @BeforeEach
     void setUp() {
         WeatherClient stubClient = new WeatherClientStub(responseSupplier);
-        sdk = new WeatherSDKImpl(stubClient, Mode.ON_DEMAND, 10, new LRUWeatherCache(10, DEFAULT_TTL));
+        // Passing null as advisor for basic tests
+        sdk = new WeatherSDKImpl(stubClient, Mode.ON_DEMAND, 10, new LRUWeatherCache(10, DEFAULT_TTL), null);
     }
 
     @Test
     void testGetWeather_CacheMissAndHit() throws WeatherSDKException {
-        // First call → cache miss
         WeatherResponse response1 = sdk.getWeather(CITY);
         assertNotNull(response1);
 
-        // Second call → cache hit (should be EXACTLY the same instance in memory)
         WeatherResponse response2 = sdk.getWeather(CITY);
         assertSame(response1, response2, "Should return the SAME object from cache (hit)");
     }
@@ -54,19 +57,31 @@ class WeatherSDKImplIntegrationTest {
     @Test
     void testExpirationTriggersRefresh() throws WeatherSDKException, InterruptedException {
         WeatherClient stubClient = new WeatherClientStub(responseSupplier);
-        // Very short TTL of 50ms
-        WeatherSDKImpl shortTtlSdk = new WeatherSDKImpl(stubClient, Mode.ON_DEMAND, 10, new LRUWeatherCache(10, 50));
+        WeatherSDKImpl shortTtlSdk = new WeatherSDKImpl(stubClient, Mode.ON_DEMAND, 10, new LRUWeatherCache(10, 50), null);
 
         WeatherResponse response1 = shortTtlSdk.getWeather(CITY);
-        
-        // Wait longer than TTL
         Thread.sleep(100); 
 
-        // Second call → data was stale → cache refreshed from supplier → NEW object created
         WeatherResponse response2 = shortTtlSdk.getWeather(CITY);
         
         assertNotSame(response1, response2, "Should fetch a FRESH object after cache expiration");
-        assertEquals(response1.getName(), response2.getName(), "Data content should still be correct");
+        assertEquals(response1.getName(), response2.getName());
+    }
+
+    @Test
+    void testGetAIAdvice_WhenNoAdvisor() throws WeatherSDKException {
+        String advice = sdk.getAIAdvice(CITY);
+        assertTrue(advice.contains("AI Advice is not configured"), "Should return fallback message when advisor is null");
+    }
+
+    @Test
+    void testGetAIAdvice_WithStubAdvisor() throws WeatherSDKException {
+        WeatherClient stubClient = new WeatherClientStub(responseSupplier);
+        WeatherAdvisor stubAdvisor = weather -> "Wear a jacket";
+        WeatherSDKImpl aiSdk = new WeatherSDKImpl(stubClient, Mode.ON_DEMAND, 10, new LRUWeatherCache(10, DEFAULT_TTL), stubAdvisor);
+
+        String advice = aiSdk.getAIAdvice(CITY);
+        assertEquals("Wear a jacket", advice);
     }
 
     @Test
@@ -74,7 +89,6 @@ class WeatherSDKImplIntegrationTest {
         WeatherResponse response1 = sdk.getWeather(CITY);
         sdk.delete();
 
-        // After delete, even if TTL hasn't passed, cache is empty → new fetch
         WeatherResponse response2 = sdk.getWeather(CITY);
         assertNotSame(response1, response2);
     }

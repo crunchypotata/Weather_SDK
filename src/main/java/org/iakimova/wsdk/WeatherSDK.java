@@ -1,10 +1,11 @@
 package org.iakimova.wsdk;
 
+import org.iakimova.wsdk.domain.Mode;
+import org.iakimova.wsdk.domain.WeatherResponse;
+import org.iakimova.wsdk.domain.WeatherSDKException;
+
 /**
- * Public interface for accessing current weather data.
- * <p>
- * This SDK provides a simple way to retrieve weather information for a specific city,
- * handling network communication, JSON parsing, and caching internally.
+ * Public interface for accessing current weather data and AI-based advice.
  */
 public interface WeatherSDK {
 
@@ -17,7 +18,7 @@ public interface WeatherSDK {
      *       the cached value is returned immediately with zero network latency.</li>
      *   <li>If data is missing or stale (exceeds TTL) – the SDK will automatically 
      *       fetch updated data from the weather provider.</li>
-     *   <li>In {@link Mode#POLLING} mode, the SDK updates cached data periodically 
+     *   <li>In {@link Mode#POLLING} mode, the SDK updates cached data periodically
      *       in the background according to the configured interval.</li>
      * </ul>
      *
@@ -28,10 +29,19 @@ public interface WeatherSDK {
     WeatherResponse getWeather(String city) throws WeatherSDKException;
 
     /**
-     * Deletes the SDK instance and releases all associated resources.
+     * Generates an AI-based weather advice for the given city.
      * <p>
-     * This method clears the local cache and stops any background polling threads.
-     * After calling this method, the instance should no longer be used.
+     * <b>IMPORTANT:</b> This method requires an AI API key to be set in the configuration.
+     * If no AI key is provided, this method may return a default message or throw an exception.
+     *
+     * @param city The name of the city to get advice for.
+     * @return A string containing the AI's weather advice (e.g., clothing suggestions, activity ideas).
+     * @throws WeatherSDKException if the advice generation fails.
+     */
+    String getAIAdvice(String city) throws WeatherSDKException;
+
+    /**
+     * Deletes the SDK instance and releases all associated resources.
      */
     void delete();
 }

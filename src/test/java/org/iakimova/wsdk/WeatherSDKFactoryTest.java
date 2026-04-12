@@ -1,6 +1,9 @@
 package org.iakimova.wsdk;
 
+import org.iakimova.wsdk.client.WeatherClient;
+import org.iakimova.wsdk.domain.WeatherSDKException;
 import org.junit.jupiter.api.Test;
+import java.util.function.Supplier;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -8,12 +11,14 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class WeatherSDKFactoryTest {
 
+    private final Supplier<WeatherResponse> responseSupplier = () -> 
+            WeatherResponse.builder().name("TestCity").build();
+
     @Test
     void testSingletonPerApiKey() throws WeatherSDKException {
-        // Create stub response and clients
-        WeatherResponse response = WeatherResponse.builder().name("TestCity").build();
-        WeatherClient client1 = new WeatherClientStub(response);
-        WeatherClient client2 = new WeatherClientStub(response);
+        // Create stub clients
+        WeatherClient client1 = new WeatherClientStub(responseSupplier);
+        WeatherClient client2 = new WeatherClientStub(responseSupplier);
         
         WeatherSDKConfig config = WeatherSDKConfig.builder().build();
 
@@ -28,8 +33,7 @@ class WeatherSDKFactoryTest {
 
     @Test
     void testDifferentKeysProduceDifferentInstances() throws WeatherSDKException {
-        WeatherResponse response = WeatherResponse.builder().name("TestCity").build();
-        WeatherClient client = new WeatherClientStub(response);
+        WeatherClient client = new WeatherClientStub(responseSupplier);
         WeatherSDKConfig config = WeatherSDKConfig.builder().build();
 
         WeatherSDK sdk1 = WeatherSDKFactory.getSDK("KEY_A", config, client);
@@ -40,8 +44,7 @@ class WeatherSDKFactoryTest {
 
     @Test
     void testDeleteRemovesInstance() throws WeatherSDKException {
-        WeatherResponse response = WeatherResponse.builder().name("TestCity").build();
-        WeatherClient client = new WeatherClientStub(response);
+        WeatherClient client = new WeatherClientStub(responseSupplier);
         WeatherSDKConfig config = WeatherSDKConfig.builder().build();
 
         WeatherSDK sdk1 = WeatherSDKFactory.getSDK("KEY_DELETE", config, client);

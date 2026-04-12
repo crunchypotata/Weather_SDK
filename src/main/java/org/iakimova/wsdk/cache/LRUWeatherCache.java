@@ -1,7 +1,7 @@
 package org.iakimova.wsdk.cache;
 
-import org.iakimova.wsdk.WeatherResponse;
 import java.util.LinkedHashMap;
+import org.iakimova.wsdk.domain.WeatherResponse;
 import java.util.Map;
 import java.util.Set;
 

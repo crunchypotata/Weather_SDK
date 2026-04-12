@@ -1,18 +1,21 @@
-package org.iakimova.wsdk;
+package org.iakimova.wsdk.core;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import org.iakimova.wsdk.domain.Mode;
+import org.iakimova.wsdk.domain.WeatherResponse;
+import org.iakimova.wsdk.WeatherSDK;
+import org.iakimova.wsdk.domain.WeatherSDKException;
+import org.iakimova.wsdk.advisor.WeatherAdvisor;
 import org.iakimova.wsdk.cache.WeatherCache;
+import org.iakimova.wsdk.client.WeatherClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Core implementation of the Weather SDK.
- * <p>
- * This class orchestrates weather data retrieval strategies, delegating the 
- * specifics of network communication and data formatting to the {@link WeatherClient}.
- * It manages the cache's lifecycle and ensures that users receive fresh data.
  */
 public class WeatherSDKImpl implements WeatherSDK {
 
@@ -22,26 +25,30 @@ public class WeatherSDKImpl implements WeatherSDK {
     private final Mode mode;
     private final int pollingIntervalMinutes;
     private final WeatherCache cache;
+    private final WeatherAdvisor advisor; // Optional AI advisor
     private ScheduledExecutorService scheduler;
 
     /**
      * Constructs a new {@code WeatherSDKImpl} instance.
      *
-     * @param weatherProvider       The provider responsible for fetching and formatting weather data.
-     * @param mode                  The operation mode ({@link Mode#ON_DEMAND} or {@link Mode#POLLING}).
-     * @param pollingIntervalMinutes The interval in minutes for background updates (if active).
-     * @param cache                 The cache implementation used for storing weather data.
+     * @param weatherProvider       The provider responsible for fetching weather data.
+     * @param mode                  The operation mode.
+     * @param pollingIntervalMinutes The interval in minutes for background updates.
+     * @param cache                 The cache implementation.
+     * @param advisor               The AI weather advisor (optional).
      */
     public WeatherSDKImpl(
             WeatherClient weatherProvider,
             Mode mode,
             int pollingIntervalMinutes,
-            WeatherCache cache
+            WeatherCache cache,
+            WeatherAdvisor advisor
     ) {
         this.weatherProvider = weatherProvider;
         this.mode = mode;
         this.pollingIntervalMinutes = pollingIntervalMinutes;
         this.cache = cache;
+        this.advisor = advisor;
 
         if (mode == Mode.POLLING) {
             startPolling();
@@ -51,7 +58,7 @@ public class WeatherSDKImpl implements WeatherSDK {
     /**
      * {@inheritDoc}
      * <p>
-     * Returns cached data if it's within the TTL; otherwise, fetches fresh data 
+     * Returns cached data if it's within the TTL; otherwise, fetches fresh data
      * from the provider and updates the cache.
      *
      * @param city The name of the city.
@@ -76,12 +83,29 @@ public class WeatherSDKImpl implements WeatherSDK {
     }
 
     /**
-     * Fetches fresh data from the weather provider and stores it in the local cache.
+     * {@inheritDoc}
+     * <p>
+     * First ensures that fresh weather data is available, then asks the AI advisor 
+     * for its suggestions based on that data.
      *
      * @param city The city name.
-     * @return The updated {@link WeatherResponse}.
-     * @throws WeatherSDKException if the update fails.
+     * @return AI weather advice or a fallback message if no advisor is configured.
+     * @throws WeatherSDKException if weather retrieval fails.
      */
+    @Override
+    public String getAIAdvice(String city) throws WeatherSDKException {
+        if (advisor == null) {
+            return "AI Advice is not configured. Please provide an AI API key in WeatherSDKConfig.";
+        }
+
+        log.debug("Generating AI advice for city: {}", city);
+        
+        // Always ensure we have fresh weather data first
+        WeatherResponse weather = getWeather(city);
+        
+        return advisor.getAdvice(weather);
+    }
+
     private WeatherResponse updateWeatherForCity(String city) throws WeatherSDKException {
         WeatherResponse response = weatherProvider.getWeather(city);
         
@@ -94,9 +118,6 @@ public class WeatherSDKImpl implements WeatherSDK {
         return response;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void delete() {
         log.info("Deleting SDK instance: clearing cache and stopping background threads.");

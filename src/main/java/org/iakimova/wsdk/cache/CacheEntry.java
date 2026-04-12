@@ -1,6 +1,6 @@
 package org.iakimova.wsdk.cache;
 
-import org.iakimova.wsdk.WeatherResponse;
+import org.iakimova.wsdk.domain.WeatherResponse;
 
 /**
  * Internal wrapper for cached weather data with a timestamp.

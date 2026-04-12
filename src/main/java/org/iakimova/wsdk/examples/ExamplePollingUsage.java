@@ -1,6 +1,10 @@
 package org.iakimova.wsdk.examples;
 
 import org.iakimova.wsdk.*;
+import org.iakimova.wsdk.domain.Mode;
+import org.iakimova.wsdk.domain.WeatherSDKException;
+import org.iakimova.wsdk.domain.WeatherResponse;
+
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;

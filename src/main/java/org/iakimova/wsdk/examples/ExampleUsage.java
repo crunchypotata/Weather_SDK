@@ -1,10 +1,15 @@
 package org.iakimova.wsdk.examples;
 
 import org.iakimova.wsdk.*;
+import org.iakimova.wsdk.domain.Mode;
+import org.iakimova.wsdk.domain.WeatherResponse;
+import org.iakimova.wsdk.domain.WeatherSDKException;
+
+import java.util.concurrent.TimeUnit;
 
 /**
- * Basic example of using WeatherSDK in ON_DEMAND mode.
- * Shows how to use the simplest factory method and read basic weather data.
+ * Basic example of using WeatherSDK in ON_DEMAND mode with custom configuration.
+ * Demonstrates the use of the simplest factory method and manual cache adjustment.
  */
 public class ExampleUsage {
 
@@ -17,25 +22,33 @@ public class ExampleUsage {
         }
 
         try {
-            // Get the SDK instance using the simplest factory method (defaults: ON_DEMAND, 10 min TTL)
-            WeatherSDK sdk = WeatherSDKFactory.getSDK(apiKey);
+            // Option 1: Quick start using default configuration (ON_DEMAND, 10 min TTL)
+            WeatherSDK sdkDefault = WeatherSDKFactory.getSDK(apiKey);
+            System.out.println("Quick fetch for Karachi: " + sdkDefault.getWeather("Karachi").getName());
 
-            // Fetch weather for a city
-            System.out.println("Fetching weather for Karachi...");
-            WeatherResponse weather = sdk.getWeather("Karachi");
+            // Option 2: Custom configuration for high-traffic scenarios
+            WeatherSDKConfig customConfig = WeatherSDKConfig.builder()
+                    .withMode(Mode.ON_DEMAND)
+                    .withCacheTtl(1, TimeUnit.HOURS)
+                    .withCacheSize(500)
+                    .build();
 
-            // Print some basic info
-            System.out.println("City: " + weather.getName());
-            if (weather.firstWeather() != null) {
-                System.out.println("Weather: " + weather.firstWeather().getMain() + " (" + weather.firstWeather().getDescription() + ")");
-            }
-            if (weather.getTemperature() != null) {
-                System.out.println("Temperature: " + weather.getTemperature().getTemp() + "K (feels like " + weather.getTemperature().getFeelsLike() + "K)");
-            }
-            System.out.println("Wind speed: " + (weather.getWind() != null ? weather.getWind().getSpeed() : "N/A"));
-            System.out.println("Visibility: " + weather.getVisibility());
+            // Note: In reality, getSDK will return the existing instance for the same key.
+            // If you need to change config, delete the old instance first.
+            WeatherSDKFactory.deleteSDK(apiKey);
+            WeatherSDK sdkCustom = WeatherSDKFactory.getSDK(apiKey, customConfig);
 
-            // Cleanup: clears cache for this instance
+            // Fetch weather for Barcelona with extended data
+            WeatherResponse weather = sdkCustom.getWeather("Barcelona");
+            System.out.println("\n--- Detailed Weather for " + weather.getName() + " ---");
+            System.out.println("Temperature: " + weather.getTemperature().getTemp() + "K (Feels like: " + weather.getTemperature().getFeelsLike() + "K)");
+            System.out.println("Humidity: " + weather.getTemperature().getHumidity() + "%");
+            System.out.println("Condition: " + weather.firstWeather().getDescription());
+            System.out.println("Wind Speed: " + weather.getWind().getSpeed() + " m/s");
+            System.out.println("Visibility: " + weather.getVisibility() + "m");
+            System.out.println("----------------------------------------");
+
+            // Cleanup: stops background threads and clears cache for this API key
             WeatherSDKFactory.deleteSDK(apiKey);
 
         } catch (WeatherSDKException e) {

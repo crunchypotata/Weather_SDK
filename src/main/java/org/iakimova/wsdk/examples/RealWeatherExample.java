@@ -1,6 +1,8 @@
 package org.iakimova.wsdk.examples;
 
 import org.iakimova.wsdk.*;
+import org.iakimova.wsdk.domain.WeatherSDKException;
+import org.iakimova.wsdk.domain.WeatherResponse;
 
 /**
  * Real-world example of using the Weather SDK to fetch detailed weather data.
