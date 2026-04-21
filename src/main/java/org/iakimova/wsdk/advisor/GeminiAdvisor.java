@@ -2,6 +2,7 @@ package org.iakimova.wsdk.advisor;
 
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
+import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
@@ -12,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Adapter for {@link WeatherAdvisor} that uses Google Gemini AI.
- * Updated for compatibility with Google AI Studio API.
  */
 public class GeminiAdvisor implements WeatherAdvisor {
 
@@ -24,43 +24,51 @@ public class GeminiAdvisor implements WeatherAdvisor {
             throw new IllegalArgumentException("Gemini API key is required");
         }
 
-        // Using "gemini-1.5-flash" is standard. 
-        // If you still get 404, the problem is likely in the API Key permissions in Google AI Studio.
-        ChatLanguageModel model = GoogleAiGeminiChatModel.builder()
-                .apiKey(geminiApiKey)
-                .modelName("gemini-1.5-flash") 
-                .build();
+        // We switch to 'gemini-pro' as it's the most compatible model across all API versions
+//        ChatLanguageModel model = GoogleAiGeminiChatModel.builder()
+//                .apiKey(geminiApiKey)
+//                .modelName("gemini-1.5-flash")
+//                .logRequestsAndResponses(true)
+////                .maxOutputTokens(150)
+////                .temperature(0.5)
+//                .build();
 
         this.aiAgent = AiServices.builder(WeatherAiAgent.class)
-                .chatLanguageModel(model)
+                .chatLanguageModel(OpenAiChatModel.builder()
+                        // Убираем последний слэш и используем v1 (более стабильную)
+                        .baseUrl("https://generativelanguage.googleapis.com/v1beta/openai/")
+                        .apiKey(geminiApiKey)
+                        .modelName("gemini-1.5-flash")
+                        .logRequests(true) // Добавь это, чтобы видеть, куда именно идет запрос
+                        .logResponses(true)
+                        .maxTokens(150)
+                        .temperature(0.5)
+                        .build())
                 .build();
     }
 
     @Override
     public String getAdvice(WeatherResponse weather) {
-        if (weather == null) return "No weather data.";
+        if (weather == null) return "No weather data available.";
         
         try {
-            // Detailed weather summary for the AI
-            String summary = String.format("City: %s, Condition: %s (%s), Temp: %.2fK, Humidity: %d%%, Wind: %.2fm/s",
+            String summary = String.format("City: %s, Condition: %s (%s), Temp: %.2fK, Humidity: %d%%",
                     weather.getName(),
                     (weather.firstWeather() != null ? weather.firstWeather().getMain() : "N/A"),
                     (weather.firstWeather() != null ? weather.firstWeather().getDescription() : "N/A"),
                     (weather.getTemperature() != null ? weather.getTemperature().getTemp() : 0.0),
-                    (weather.getTemperature() != null ? weather.getTemperature().getHumidity() : 0),
-                    (weather.getWind() != null ? weather.getWind().getSpeed() : 0.0));
+                    (weather.getTemperature() != null ? weather.getTemperature().getHumidity() : 0));
             
-            log.debug("Requesting Gemini advice for: {}", weather.getName());
             return aiAgent.giveWeatherAdvice(summary);
         } catch (Exception e) {
-            log.error("Gemini AI failure: {}", e.getMessage());
-            return "AI Advice via Gemini currently unavailable. (Error: " + e.getMessage() + ")";
+            log.error("Gemini AI error: {}", e.getMessage());
+            return "AI Advice unavailable. Google AI returned an error: " + e.getMessage();
         }
     }
 
     private interface WeatherAiAgent {
-        @SystemMessage("You are a helpful weather advisor. Provide concise advice (max 50 words) based on the weather conditions.")
-        @UserMessage("Current weather conditions:\n{{s}}")
+        @SystemMessage("You are a helpful weather advisor. Provide concise advice (max 50 words).")
+        @UserMessage("Current weather summary: {{s}}")
         String giveWeatherAdvice(@V("s") String summary);
     }
 }
