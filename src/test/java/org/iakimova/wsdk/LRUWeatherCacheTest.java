@@ -1,6 +1,7 @@
 package org.iakimova.wsdk;
 
 import org.iakimova.wsdk.cache.LRUWeatherCache;
+import org.iakimova.wsdk.domain.WeatherResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

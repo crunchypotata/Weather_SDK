@@ -1,6 +1,7 @@
 package org.iakimova.wsdk;
 
 import org.iakimova.wsdk.client.WeatherClient;
+import org.iakimova.wsdk.domain.WeatherResponse;
 import org.iakimova.wsdk.domain.WeatherSDKException;
 import org.junit.jupiter.api.Test;
 import java.util.function.Supplier;
@@ -11,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class WeatherSDKFactoryTest {
 
-    private final Supplier<WeatherResponse> responseSupplier = () -> 
+    private final Supplier<WeatherResponse> responseSupplier = () ->
             WeatherResponse.builder().name("TestCity").build();
 
     @Test

@@ -17,16 +17,20 @@ public class ExampleWithAI {
                     .build();
 
             WeatherSDK sdk = WeatherSDKFactory.getSDK(weatherKey, config);
-            String city = "Copenhagen";
+            String city = "Barcelona";
 
             WeatherResponse weather = sdk.getWeather(city);
-            System.out.printf("Weather in %s: %s (%s), Temp: %.2fK%n",
-                    city,
-                    weather.firstWeather().getMain(),
-                    weather.firstWeather().getDescription(),
-                    weather.getTemperature().getTemp());
+            System.out.println("=== Full Weather Data ===");
+            System.out.println("City: " + weather.getName());
+            System.out.println("Condition: " + weather.firstWeather().getDescription());
+            System.out.println("Temp: " + weather.getTemperature().getTemp() + "K");
+            System.out.println("Feels Like: " + weather.getTemperature().getFeelsLike() + "K");
+            System.out.println("Humidity: " + weather.getTemperature().getHumidity() + "%");
+            System.out.println("Wind: " + weather.getWind().getSpeed() + " m/s");
+            System.out.println("=========================");
 
             System.out.println("\nAI Advice: " + sdk.getAIAdvice(city));
+
             WeatherSDKFactory.deleteSDK(weatherKey);
         } catch (WeatherSDKException e) {
             System.err.println("Error: " + e.getMessage());

@@ -1,124 +1,112 @@
-# Weather SDK 🌝
+# Weather SDK for Java
 
-Develop a SDK for accessing a weather API  
-Task reference: https://openweathermap.org/api
-<br>
-<br>
-___
+A lightweight, thread-safe library for integrating weather data and **AI-powered** meteorological insights into Java applications. 
 
-## 🗄️ Architecture & Modularity
-#### This SDK is modular, with a clear separation of concerns: ####
+Built on **Hexagonal Architecture** principles, the SDK ensures high modularity, testability, and seamless integration.
 
-- **WeatherAPI** — handles HTTP requests to OpenWeather; can be replaced or mocked for testing.
-- **WeatherCache** — independent cache for up to configurable number of cities; TTL configurable; can be swapped with custom implementations.
-- **WeatherSDK** — orchestrates API calls and cache, supports `ON_DEMAND` and `POLLING` modes.
+## Core Principles
+*   **Decoupling**: Core business logic is isolated from infrastructure (HTTP clients, JSON parsers).
+*   **Resource Efficiency**: Uses a shared connection pool to prevent socket exhaustion.
+*   **Extensibility**: Support for multiple AI providers (OpenAI, Google Gemini) and customizable caching strategies.
+*   **Thread Safety**: Fully compatible with high-concurrency environments.
 
-⭐ All modules are fully **configurable** and **testable** independently.
-<br>
-<br>
+---
 
-## 📈 Testing & Coverage
+## Architecture Overview
+The SDK follows the **Ports and Adapters** pattern:
+*   **Domain Layer**: Contains the core logic and models (`WeatherResponse`, `Mode`).
+*   **Inbound Port**: The `WeatherSDK` interface serves as the primary entry point.
+*   **Outbound Ports**: Abstractions for API communication (`WeatherClient`), Caching (`WeatherCache`), and AI analysis (`WeatherAdvisor`).
+*   **Adapters**: Pre-built implementations for OpenWeather API, LRU-based caching, and LangChain4j-based AI advisors.
 
-- Unit tests cover all **DTO mappings**, caching behavior, and SDK lifecycle.
-- Integration tests simulate full SDK usage, including **background polling** and cache expiry.
-- Coverage includes full lifecycle of SDK instances (creation, API calls, caching, deletion).
-- Ensures that `WeatherSDKFactory` enforces **singleton-per-API-key** rule.
-<br>
+---
 
-## ✅ Configuration & Usage
-- Cache:
-Size configurable (default: 10 cities)
-TTL configurable (default: 10 minutes)
-- Polling interval configurable for `POLLING` mode
-<br>
-<br>
+## Features
 
-## 🔊 SDK API
-### WeatherSDK Interface
+### 1. Operation Modes
+*   **ON_DEMAND**: Fetches data only when requested by the caller.
+*   **POLLING**: Periodically updates the cache in the background, ensuring near-zero latency for weather requests.
 
-| Method | Description |
-|--------|-------------|
-| `WeatherResponse getWeather(String city)` | Returns current weather for the given city (first match). Updates cache depending on SDK mode (**ON_DEMAND** or **POLLING**). |
-| `void delete()` | Clears cache and stops polling (if any). |
-| `setCacheSize(int size)` | Configures cache size (optional). |
-| `setCacheTTLMinutes(int minutes)` | Configures cache TTL (optional). |
-| `setPollingIntervalMinutes(int minutes)` | Configures polling interval for **POLLING** mode (optional). |
-<br>
+### 2. Intelligent Caching
+The SDK includes a built-in LRU cache with configurable **Time-To-Live (TTL)**. Expiration logic is handled internally by the cache layer to maintain high performance.
 
-## 👾 WeatherResponse DTO
+### 3. AI Weather Advisor
+Integrates with **OpenAI** and **Google Gemini** via LangChain4j to provide human-readable advice based on real-time weather metrics (e.g., clothing suggestions, activity planning).
 
-Represents current weather returned by the SDK. Includes:
+---
 
-- `weather` — list of weather conditions (first element is primary)
-- `temperature` — temperature info (`temp`, `feelsLike`)
-- `visibility` — in meters
-- `wind` — wind speed in m/s
-- `datetime` — unix timestamp
-- `sys` — sunrise and sunset times
-- `timezone` — offset in seconds
-- `name` — city name
+## Configuration
 
-Convenience method `firstWeather()` returns the first weather condition.
-<br>
-<br>
-
-
-## ⚙️ Modes
-
-- ON_DEMAND — updates weather only on method call
-- POLLING — updates weather in background every N minutes (default 10)
-
-## 🏭 Factory
-
-- WeatherSDKFactory.createSDK(String apiKey, Mode mode) — creates SDK instance (only one per API key)
-- WeatherSDKFactory.deleteSDK(String apiKey) — deletes SDK instance
-<br>
-<br>
-
-## 🛠 How to build
-
-``` bash 
-    ./gradlew build
-```
-
-## 📜  Documentation
-
-``` bash
-    ./gradlew javadoc
-```
-<br>
-
-## Usage example
+The SDK is configured via a **Fluent Builder** API, eliminating hardcoded values and allowing precise control over its behavior.
 
 ```java
-WeatherSDK sdk = WeatherSDKFactory.createSDK("YOUR_API_KEY", Mode.POLLING);
-
-// Configure cache & polling if needed
-sdk.setCacheSize(15);
-sdk.setCacheTTLMinutes(5);
-sdk.setPollingIntervalMinutes(2);
-
-// Get weather for a city
-WeatherResponse resp = sdk.getWeather("Barcelona");
-System.out.println(resp.getName());
-        System.out.println("Temperature = " + resp.getTemperature().getTemp() + " K");
-
-// Delete SDK instance and clean up resources
-        WeatherSDKFactory.deleteSDK("YOUR_API_KEY");
+WeatherSDKConfig config = WeatherSDKConfig.builder()
+    .withMode(Mode.POLLING)
+    .withPollingInterval(5)                      // minutes
+    .withCacheTtl(10, TimeUnit.MINUTES)          // entry expiration
+    .withCacheSize(100)                          // max cities in cache
+    .withGeminiApiKey(dotenv.get("GEMINI_KEY"))  // enabled AI capabilities
+    .build();
 ```
-<br>
-<br>
 
-## 📝 Notes
+---
 
-- fields always non-null (if provided by OpenWeather)
-- temperature fields are in Kelvin (same as original API)
-- datetime = unix timestamp (sec)
-- timezone = offset in seconds
-- wind speed m/s
+## Usage
 
-## 🌚 Future Enhancements
-- Add request metrics and cache hit ratio reporting
-- Implement retry strategy on network errors
-- Extract HTTP client into an interface for easier testing and replacement
-- Publish SDK artifact to Maven Central
+### Initialization
+
+```java
+// Uses singleton-per-API-key pattern internally
+WeatherSDK sdk = WeatherSDKFactory.getSDK(WEATHER_API_KEY, config);
+```
+
+### Retrieving Weather Data
+
+```java
+WeatherResponse weather = sdk.getWeather("Barcelona");
+System.out.println("City: " + weather.getName());
+System.out.println("Temperature: " + weather.getTemperature().getTemp() + "K");
+```
+
+### Generating AI Advice
+
+```java
+String advice = sdk.getAIAdvice("Barcelona");
+System.out.println("Meteorological Advice: " + advice);
+```
+
+---
+
+## Build & Documentation
+
+```bash
+# Build the project
+./gradlew build
+
+# Generate Javadoc documentation
+./gradlew javadoc
+```
+
+---
+
+## Data Model (WeatherResponse)
+The SDK provides a comprehensive DTO containing:
+*   **Conditions**: Main status and detailed description.
+*   **Metrics**: Temperature (Kelvin), Humidity (%), Pressure (hPa).
+*   **Wind**: Speed (m/s) and Direction (degrees).
+*   **Metadata**: Visibility, Sunrise/Sunset (Unix timestamp), and Timezone offset.
+
+---
+
+## Requirements
+*   **Java**: 21+
+*   **Dependencies**: LangChain4j (optional AI features), OkHttp 4, Jackson.
+
+---
+
+### Future Enhancements
+
+*   [ ] Request metrics and cache hit ratio reporting.
+*   [ ] Implement retry strategy for network errors.
+*   [ ] Publish SDK artifact to Maven Central.
+*   [ ] **Cache AI advice**: Implement caching for AI-generated advice to reduce API calls to paid LLMs.

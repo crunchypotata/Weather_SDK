@@ -1,6 +1,8 @@
 package org.iakimova.wsdk;
 
 import org.iakimova.wsdk.client.WeatherClient;
+import org.iakimova.wsdk.domain.WeatherResponse;
+
 
 import java.util.function.Supplier;
 

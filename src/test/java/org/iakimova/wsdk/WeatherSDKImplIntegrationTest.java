@@ -4,6 +4,7 @@ import org.iakimova.wsdk.advisor.WeatherAdvisor;
 import org.iakimova.wsdk.cache.LRUWeatherCache;
 import org.iakimova.wsdk.client.WeatherClient;
 import org.iakimova.wsdk.core.WeatherSDKImpl;
+import org.iakimova.wsdk.domain.WeatherResponse;
 import org.iakimova.wsdk.domain.Mode;
 import org.iakimova.wsdk.domain.WeatherSDKException;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +25,7 @@ class WeatherSDKImplIntegrationTest {
     private final String CITY = "Zocca";
     private static final long DEFAULT_TTL = TimeUnit.MINUTES.toMillis(10);
 
-    private final Supplier<WeatherResponse> responseSupplier = () -> 
+    private final Supplier<WeatherResponse> responseSupplier = () ->
         WeatherResponse.builder()
                 .name(CITY)
                 .weather(Collections.singletonList(
